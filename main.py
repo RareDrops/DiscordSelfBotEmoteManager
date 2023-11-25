@@ -22,10 +22,12 @@ $ python3 -m pip install -U .[voice]
 client = commands.Bot(command_prefix='cl',self_bot = True, request_guilds = False, member_cache_flags = selfdiscord.MemberCacheFlags.none())
 client.remove_command('help')
 
+
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
     await client.change_presence(status=selfdiscord.Status.invisible, edit_settings= False, afk=True)
+
 
 #commands
 @client.command()
@@ -35,6 +37,7 @@ async def help(ctx):
     
     help_list = "mke [emoji_url, emoji_name]\nmks [message_id, sticker_name]\nmv [old_name, new_name]\nlistdir [opt: search]\nrm [filename+.(filetype)]"
     await ctx.send(help_list)
+
 
 @client.command()
 #note that you can manually add emojis in the folder but caution with casing as linux filesystem are case-senstitive
@@ -67,10 +70,12 @@ async def mke(ctx, emoji_url, emoji_name):
     await ctx.message.delete()
     await ctx.send(file=selfdiscord.File(filepath, filename="emote.png"))
 
+
 @mke.error
 async def mke_error(ctx, error):
     if isinstance(error, commands.BadArgument):
         await ctx.send("Invalid.")
+
 
 @client.command()
 async def mks(ctx, message_id: int, sticker_name):
@@ -110,11 +115,13 @@ async def mks(ctx, message_id: int, sticker_name):
     await ctx.message.delete()
     await ctx.send(file=selfdiscord.File(sticker_path, filename="emote.png"))
 
+
 @mks.error
 async def mks_error(ctx, error):
     if isinstance(error, commands.BadArgument):
         await ctx.send("Invalid.")
-    
+
+
 @client.command()
 async def mv(ctx, old_name, new_name):
     if ctx.message.author != client.user:
@@ -123,6 +130,7 @@ async def mv(ctx, old_name, new_name):
     os.rename("Emotes/" + old_name + ".png", "Emotes/" + new_name + ".png")
     await ctx.delete(ctx.message)
     await ctx.send(old_name + ".png" + " -> " + new_name + ".png", delete_after = 5)
+
 
 @client.command()
 async def listdir(ctx, search = None):
@@ -147,6 +155,7 @@ async def listdir(ctx, search = None):
         dir_string_list += f"{name:<30}{str(round(byte_size/1000, 2)) + ' KB':<10} {modified_time_date}\n"
     await ctx.send(dir_string_list, delete_after = 15)
 
+
 @client.command()
 async def rm(ctx, name):
     if ctx.message.author != client.user:
@@ -154,6 +163,7 @@ async def rm(ctx, name):
     
     os.remove(f"Emotes/{name}")
     await ctx.message.edit(ctx.message + '- ✅')
+
 
 #events
 @client.event
@@ -186,6 +196,7 @@ async def on_message(message):
 
     await client.process_commands(message)
 
+
 def find_image(emote):
     #initialization check for sticker flag
     is_sticker = False
@@ -214,6 +225,7 @@ def find_image(emote):
     image_binary.seek(0)
     image.close()
     return image_binary
+
 
 #replace os.getenv("TOKEN") with your user token.
 client.run(os.getenv("TOKEN"))
