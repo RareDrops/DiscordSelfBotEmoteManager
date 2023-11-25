@@ -9,4 +9,6 @@ $ python3 -m pip install -U .[voice]
 ```
 
 Uninstall discord.py
+```
 $ pip uninstall discord.py
+```
