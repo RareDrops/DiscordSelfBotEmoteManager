@@ -56,7 +56,7 @@ async def mke(ctx, emoji_url, emoji_name):
         with open(filepath, "wb") as f:
             f.write(response.content)
     else:
-        await ctx.send("Failed to download the sticker.")
+        await ctx.send("Failed to download the sticker.", delete_after = 5)
         return
     
     #resize sticker
@@ -65,7 +65,7 @@ async def mke(ctx, emoji_url, emoji_name):
             img = img.resize((48, 48))
             img.save(filepath)
     except Exception as e:
-        await ctx.send(f"An error occurred while resizing: {e}")
+        await ctx.send(f"An error occurred while resizing: {e}", delete_after = 5)
 
     await ctx.message.delete()
     await ctx.send(file=selfdiscord.File(filepath, filename="emote.png"))
@@ -74,7 +74,7 @@ async def mke(ctx, emoji_url, emoji_name):
 @mke.error
 async def mke_error(ctx, error):
     if isinstance(error, commands.BadArgument):
-        await ctx.send("Invalid.")
+        await ctx.send("Invalid.", delete_After = 5)
 
 
 @client.command()
@@ -89,7 +89,7 @@ async def mks(ctx, message_id: int, sticker_name):
     msg_obj = await ctx.fetch_message(message_id)
     #checks if msg has stickers
     if not msg_obj.stickers:
-        await ctx.send("stickern't")
+        await ctx.send("stickern't", delete_after = 5)
         return
     else:
         sticker_url = msg_obj.stickers[0].url
@@ -101,7 +101,7 @@ async def mks(ctx, message_id: int, sticker_name):
         with open(sticker_path, "wb") as f:
             f.write(response.content)
     else:
-        await ctx.send("Failed to download the sticker.")
+        await ctx.send("Failed to download the sticker.", delete_after = 5)
         return
     
     #resize sticker
@@ -110,7 +110,7 @@ async def mks(ctx, message_id: int, sticker_name):
             img = img.resize((160, 160))
             img.save(sticker_path)
     except Exception as e:
-        await ctx.send(f"An error occurred while resizing: {e}")
+        await ctx.send(f"An error occurred while resizing: {e}", delete_after = 5)
     
     await ctx.message.delete()
     await ctx.send(file=selfdiscord.File(sticker_path, filename="emote.png"))
@@ -119,7 +119,7 @@ async def mks(ctx, message_id: int, sticker_name):
 @mks.error
 async def mks_error(ctx, error):
     if isinstance(error, commands.BadArgument):
-        await ctx.send("Invalid.")
+        await ctx.send("Invalid.", delete_after = 5)
     
 
 @client.command()
@@ -127,7 +127,11 @@ async def mv(ctx, old_name, new_name):
     if ctx.message.author != client.user:
         return
     
-    os.rename("Emotes/" + old_name + ".png", "Emotes/" + new_name + ".png")
+    try:
+        os.rename("Emotes/" + old_name + ".png", "Emotes/" + new_name + ".png")
+    except FileNotFoundError as e:
+        await ctx.send(f"FNF: {e}", delete_after = 5)
+
     await ctx.message.delete()
     await ctx.send(old_name + ".png" + " -> " + new_name + ".png", delete_after = 5)
 
@@ -142,19 +146,20 @@ async def listdir(ctx, search = None):
 
     i = 0 #line counter
     for dir in dir_iterator:
-        if i > 15: #prevents from listing too much if unfiltered
+        if i > 15: #prevents from showing a long list than 15 items if there is no/poor filter
             break
+        
         if search: 
             if search not in dir.name: 
                 continue
-        else:
-            dir_stat = dir.stat()
-            name = dir.name
-            byte_size = dir_stat.st_size
-            modified_time = dir_stat.st_mtime
-            modified_time_date = datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%d')
-            dir_string_list += f"{name:<30}{str(round(byte_size/1000, 2)) + ' KB':<10} {modified_time_date}\n"
-            i += 1
+        
+        dir_stat = dir.stat()
+        name = dir.name
+        byte_size = dir_stat.st_size
+        modified_time = dir_stat.st_mtime
+        modified_time_date = datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%d')
+        dir_string_list += f"{name:<30}{str(round(byte_size/1000, 2)) + ' KB':<10} {modified_time_date}\n"
+        i += 1
             
     if dir_string_list == "":
         await ctx.send("None.", delete_after = 15)
