@@ -5,6 +5,7 @@ import io
 import re
 import os
 import requests
+import dotenv
 from os.path import exists
 from PIL import Image
 from datetime import datetime
@@ -48,7 +49,6 @@ async def mke(ctx, emoji_url, emoji_name):
     #creates directory if it doesn't exist yet
     if not exists("Emotes"):
         os.mkdir("Emotes")
-
 
     filepath = f"Emotes/{emoji_name.lower()}.png"
     response = requests.get(emoji_url)
@@ -120,7 +120,7 @@ async def mks(ctx, message_id: int, sticker_name):
 async def mks_error(ctx, error):
     if isinstance(error, commands.BadArgument):
         await ctx.send("Invalid.")
-
+    
 
 @client.command()
 async def mv(ctx, old_name, new_name):
@@ -128,7 +128,7 @@ async def mv(ctx, old_name, new_name):
         return
     
     os.rename("Emotes/" + old_name + ".png", "Emotes/" + new_name + ".png")
-    await ctx.delete(ctx.message)
+    await ctx.message.delete()
     await ctx.send(old_name + ".png" + " -> " + new_name + ".png", delete_after = 5)
 
 
@@ -140,20 +140,26 @@ async def listdir(ctx, search = None):
     dir_iterator = os.scandir("Emotes")
     dir_string_list = ""
 
-    for i, dir in enumerate(dir_iterator):
+    i = 0 #line counter
+    for dir in dir_iterator:
         if i > 15: #prevents from listing too much if unfiltered
             break
-        if search:
-            if search not in dir.name:
+        if search: 
+            if search not in dir.name: 
                 continue
-
-        dir_stat = dir.stat()
-        name = dir.name
-        byte_size = dir_stat.st_size
-        modified_time = dir_stat.st_mtime
-        modified_time_date = datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%d')
-        dir_string_list += f"{name:<30}{str(round(byte_size/1000, 2)) + ' KB':<10} {modified_time_date}\n"
-    await ctx.send(dir_string_list, delete_after = 15)
+        else:
+            dir_stat = dir.stat()
+            name = dir.name
+            byte_size = dir_stat.st_size
+            modified_time = dir_stat.st_mtime
+            modified_time_date = datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%d')
+            dir_string_list += f"{name:<30}{str(round(byte_size/1000, 2)) + ' KB':<10} {modified_time_date}\n"
+            i += 1
+            
+    if dir_string_list == "":
+        await ctx.send("None.", delete_after = 15)
+    else: 
+        await ctx.send(dir_string_list, delete_after = 15)
 
 
 @client.command()
@@ -162,7 +168,7 @@ async def rm(ctx, name):
         return
     
     os.remove(f"Emotes/{name}")
-    await ctx.message.edit(ctx.message + '- ✅')
+    await ctx.message.edit(ctx.message.content + '- ✅')
 
 
 #events
@@ -184,7 +190,7 @@ async def on_message(message):
         emote_end = str_msg.rfind(":")
         emote = str_msg[emote_begin+1:emote_end]
 
-        image = find_image(emote)
+        image = await find_image(emote)
         if image == None:
             return
         
@@ -197,7 +203,7 @@ async def on_message(message):
     await client.process_commands(message)
 
 
-def find_image(emote):
+async def find_image(emote):
     #initialization check for sticker flag
     is_sticker = False
     if emote[0] == "!":
@@ -214,11 +220,11 @@ def find_image(emote):
     else:
         filepath = f"Emotes/{emote.lower()}.png"
         if not exists(filepath):
-            return
+            await mker(emote)
+            #checks again after creating
+            if not exists(filepath):
+                return
         image = Image.open(filepath)
-        if image.size != (48, 48):
-            image = image.resize((48, 48))
-            image.save(filepath)
 
     image_binary = io.BytesIO()
     image.save(image_binary, format="PNG")
@@ -226,6 +232,36 @@ def find_image(emote):
     image.close()
     return image_binary
 
+#for if you have the name and the emote is stored in cache, note that this takes the first emote that it finds so it might be inaccurate
+async def mker(emoji_name):
+    #creates directory if it doesn't exist yet
+    if not exists("Emotes"):
+        os.mkdir("Emotes")
 
+    filepath = f"Emotes/{emoji_name.lower()}.png"
+    for i in client.guilds:
+        emoji = selfdiscord.utils.get(i.emojis, name=emoji_name)
+        if emoji is not None:
+            break
+
+    if emoji is None:
+        return
+
+    try:
+        await emoji.save(filepath)
+    except Exception as e:
+        print(f"An error has occured while downloading: {e}")
+
+    #resize sticker
+    try:
+        with Image.open(filepath) as img:
+            img = img.resize((48, 48))
+            img.save(filepath)
+    except Exception as e:
+        print(f"An error occurred while resizing: {e}")
+
+
+#loads environemntal var
+dotenv.load_dotenv()
 #replace os.getenv("TOKEN") with your user token.
 client.run(os.getenv("TOKEN"))
